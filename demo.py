@@ -15,6 +15,11 @@ try:
     HAS_CPUINFO = True
 except ImportError:
     HAS_CPUINFO = False
+try:
+    import GPUtil
+    HAS_GPUTIL = True
+except ImportError:
+    HAS_GPUTIL = False
 
 MODELS_DIR = Path(__file__).parent / "models"
 DETECTOR_MODEL = MODELS_DIR / "detector.onnx"
@@ -193,6 +198,32 @@ def get_cpu_info() -> str:
     return " | ".join(parts) if parts else "Unknown CPU"
 
 
+def get_gpu_info() -> Optional[str]:
+    if HAS_GPUTIL:
+        try:
+            gpus = GPUtil.getGPUs()
+            if gpus and len(gpus) > 0:
+                gpu = gpus[0]
+                return gpu.name.strip()
+        except Exception:
+            pass
+    
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().split('\n')[0]
+    except Exception:
+        pass
+    
+    return None
+
+
 def get_execution_provider_name(session: ort.InferenceSession) -> str:
     try:
         providers = session.get_providers()
@@ -341,6 +372,7 @@ if __name__ == "__main__":
         fps_history = []
 
         cpu_info = get_cpu_info()
+        gpu_info = get_gpu_info()
         provider_name = get_execution_provider_name(liveness_session)
 
         print("Controls:")
@@ -438,7 +470,28 @@ if __name__ == "__main__":
                 for i, cpu_line in enumerate(cpu_lines[:2]):
                     cv2.putText(display_frame, f"CPU: {cpu_line}" if i == 0 else cpu_line, (5, info_y), font, font_scale, color_white, thickness)
                     info_y += line_height
-                info_y += line_height
+                
+                if gpu_info:
+                    gpu_lines = []
+                    words = gpu_info.split()
+                    current_line = ""
+                    for word in words:
+                        if len(current_line + " " + word) <= max_chars_per_line:
+                            current_line += (" " + word if current_line else word)
+                        else:
+                            if current_line:
+                                gpu_lines.append(current_line)
+                            current_line = word
+                    if current_line:
+                        gpu_lines.append(current_line)
+                    
+                    for i, gpu_line in enumerate(gpu_lines[:2]):
+                        cv2.putText(display_frame, f"GPU: {gpu_line}" if i == 0 else gpu_line, (5, info_y), font, font_scale, color_white, thickness)
+                        info_y += line_height
+                else:
+                    cv2.putText(display_frame, "GPU: No GPU detected", (5, info_y), font, font_scale, color_white, thickness)
+                    info_y += line_height
+                
                 cv2.putText(display_frame, f"Provider: {provider_name}", (5, info_y), font, font_scale, color_white, thickness)
                 info_y += line_height
                 cv2.putText(display_frame, "Press 'i' to toggle", (5, info_y), font, 0.4, (200, 200, 200), 1)
