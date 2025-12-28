@@ -204,27 +204,39 @@ python scripts/quantize_onnx.py models/best_model.pth --input_size 128
 
 ## Repo Structure
 
+The codebase is organized into modular components for clarity and maintainability:
+
 ```
 ├── src/
+│   ├── detection/          # Face detection module
+│   │   └── face.py         # Face detector (load_detector, detect)
+│   │
+│   ├── inference/          # Model inference module
+│   │   ├── loader.py       # Model loading (load_model)
+│   │   ├── inference.py    # Inference functions (infer, process_with_logits)
+│   │   ├── preprocess.py   # Image preprocessing (crop, preprocess, preprocess_batch)
+│   │   └── system.py       # System information (CPU/GPU info)
+│   │
 │   ├── minifasv2/          # MiniFAS training code
 │   │   ├── config.py       # Training config
 │   │   ├── data.py         # Dataset loading
 │   │   ├── main.py         # Trainer class
 │   │   └── model.py        # MiniFAS architecture
-│   └── mobilenetv4/        # Legacy (kept for reference)
+│   │
+│   └── mobilenetv4/         # Legacy (kept for reference)
 │
 ├── scripts/
 │   ├── prepare_data.py        # Dataset preparation
 │   ├── train.py               # Training entrypoint
 │   ├── prepare_best_model.py  # Extract clean model weights
-│   ├── export_onnx.py          # Regular ONNX export
+│   ├── export_onnx.py         # Regular ONNX export
 │   └── quantize_onnx.py       # Quantized ONNX export
 │
 ├── docs/                   # Technical documentation
 ├── models/                 # Pre-trained models
 │   ├── best_model.pth              # Clean PyTorch model
 │   ├── best_model.onnx             # Regular ONNX
-│   └── best_model_quantized.onnx   # Quantized ONNX
+│   └── best_model_quantized.onnx  # Quantized ONNX
 └── demo.py                 # Inference demo
 ```
 
