@@ -6,18 +6,22 @@ from pathlib import Path
 import time
 import platform
 import sys
+
 try:
     import psutil
+
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
 try:
     import cpuinfo
+
     HAS_CPUINFO = True
 except ImportError:
     HAS_CPUINFO = False
 try:
     import GPUtil
+
     HAS_GPUTIL = True
 except ImportError:
     HAS_GPUTIL = False
@@ -158,16 +162,18 @@ def get_cpu_info() -> str:
     cpu_freq_mhz = None
     cpu_cores = None
     cpu_threads = None
-    
+
     if HAS_CPUINFO:
         try:
             info = cpuinfo.get_cpu_info()
-            cpu_name = info.get('brand_raw') or info.get('brand') or info.get('model name')
+            cpu_name = (
+                info.get("brand_raw") or info.get("brand") or info.get("model name")
+            )
             if cpu_name:
                 cpu_name = cpu_name.strip()
         except Exception:
             pass
-    
+
     if HAS_PSUTIL:
         try:
             cpu_freq = psutil.cpu_freq()
@@ -177,26 +183,26 @@ def get_cpu_info() -> str:
                 cpu_freq_mhz = cpu_freq.current
         except Exception:
             pass
-    
+
     if not cpu_name:
         cpu_name = platform.processor() or "Unknown CPU"
-    
+
     parts = []
     if cpu_name:
         parts.append(cpu_name)
-    
+
     if cpu_cores and cpu_threads:
         if cpu_cores == cpu_threads:
             parts.append(f"{cpu_cores} cores")
         else:
             parts.append(f"{cpu_cores}C/{cpu_threads}T")
-    
+
     if cpu_freq_mhz:
         if cpu_freq_mhz >= 1000:
             parts.append(f"{cpu_freq_mhz/1000:.2f} GHz")
         else:
             parts.append(f"{cpu_freq_mhz:.0f} MHz")
-    
+
     return " | ".join(parts) if parts else "Unknown CPU"
 
 
@@ -209,20 +215,21 @@ def get_gpu_info() -> Optional[str]:
                 return gpu.name.strip()
         except Exception:
             pass
-    
+
     try:
         import subprocess
+
         result = subprocess.run(
-            ['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'],
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
             capture_output=True,
             text=True,
-            timeout=2
+            timeout=2,
         )
         if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip().split('\n')[0]
+            return result.stdout.strip().split("\n")[0]
     except Exception:
         pass
-    
+
     return None
 
 
@@ -338,15 +345,24 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image", type=str, default=None, help="Path to image file (if not provided, uses camera)")
-    parser.add_argument("--camera", type=int, default=0, help="Camera index to use (default: 0)")
+    parser.add_argument(
+        "--image",
+        type=str,
+        default=None,
+        help="Path to image file (if not provided, uses camera)",
+    )
+    parser.add_argument(
+        "--camera", type=int, default=0, help="Camera index to use (default: 0)"
+    )
     parser.add_argument("--model_img_size", type=int, default=128)
     parser.add_argument("--bbox_expansion_factor", type=float, default=1.5)
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--margin", type=int, default=5)
     parser.add_argument("--detector_model", type=str, default=str(DETECTOR_MODEL))
     parser.add_argument("--liveness_model", type=str, default=str(LIVENESS_MODEL))
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose error logging")
+    parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose error logging"
+    )
 
     args = parser.parse_args()
 
@@ -406,12 +422,21 @@ if __name__ == "__main__":
                     bbox = face["bbox"]
                     x, y, w, h = bbox["x"], bbox["y"], bbox["width"], bbox["height"]
                     try:
-                        face_crop = crop(frame_rgb, (x, y, x + w, y + h), args.bbox_expansion_factor)
+                        face_crop = crop(
+                            frame_rgb, (x, y, x + w, y + h), args.bbox_expansion_factor
+                        )
                         face_crops.append(face_crop)
                         valid_faces.append((face, (int(x), int(y), int(w), int(h))))
-                except Exception as e:
-                    if args.verbose:
-                        print(f"Warning: Failed to crop face at ({x},{y},{w},{h}): {e}", file=sys.stderr)
+                    except Exception as e:
+                        if args.verbose:
+                            print(
+                                f"Warning: Failed to crop face at ({x},{y},{w},{h}): {e}",
+                                file=sys.stderr,
+                            )
+                        continue
+
+                if face_crops:
+                    predictions = infer(
                         face_crops, liveness_session, input_name, args.model_img_size
                     )
 
@@ -446,7 +471,9 @@ if __name__ == "__main__":
 
             display_width = 640
             display_height = 480
-            display_frame = cv2.resize(frame, (display_width, display_height), interpolation=cv2.INTER_AREA)
+            display_frame = cv2.resize(
+                frame, (display_width, display_height), interpolation=cv2.INTER_AREA
+            )
 
             if show_info:
                 avg_fps = sum(fps_history) / len(fps_history) if fps_history else 0
@@ -459,51 +486,99 @@ if __name__ == "__main__":
                 color_white = (255, 255, 255)
                 color_cyan = (255, 255, 0)
 
-                cv2.putText(display_frame, f"FPS: {avg_fps:.1f}", (5, info_y), font, font_scale, color_cyan, thickness)
+                cv2.putText(
+                    display_frame,
+                    f"FPS: {avg_fps:.1f}",
+                    (5, info_y),
+                    font,
+                    font_scale,
+                    color_cyan,
+                    thickness,
+                )
                 info_y += line_height
-                
+
                 cpu_lines = []
                 max_chars_per_line = 55
                 words = cpu_info.split()
                 current_line = ""
                 for word in words:
                     if len(current_line + " " + word) <= max_chars_per_line:
-                        current_line += (" " + word if current_line else word)
+                        current_line += " " + word if current_line else word
                     else:
                         if current_line:
                             cpu_lines.append(current_line)
                         current_line = word
                 if current_line:
                     cpu_lines.append(current_line)
-                
+
                 for i, cpu_line in enumerate(cpu_lines[:2]):
-                    cv2.putText(display_frame, f"CPU: {cpu_line}" if i == 0 else cpu_line, (5, info_y), font, font_scale, color_white, thickness)
+                    cv2.putText(
+                        display_frame,
+                        f"CPU: {cpu_line}" if i == 0 else cpu_line,
+                        (5, info_y),
+                        font,
+                        font_scale,
+                        color_white,
+                        thickness,
+                    )
                     info_y += line_height
-                
+
                 if gpu_info:
                     gpu_lines = []
                     words = gpu_info.split()
                     current_line = ""
                     for word in words:
                         if len(current_line + " " + word) <= max_chars_per_line:
-                            current_line += (" " + word if current_line else word)
+                            current_line += " " + word if current_line else word
                         else:
                             if current_line:
                                 gpu_lines.append(current_line)
                             current_line = word
                     if current_line:
                         gpu_lines.append(current_line)
-                    
+
                     for i, gpu_line in enumerate(gpu_lines[:2]):
-                        cv2.putText(display_frame, f"GPU: {gpu_line}" if i == 0 else gpu_line, (5, info_y), font, font_scale, color_white, thickness)
+                        cv2.putText(
+                            display_frame,
+                            f"GPU: {gpu_line}" if i == 0 else gpu_line,
+                            (5, info_y),
+                            font,
+                            font_scale,
+                            color_white,
+                            thickness,
+                        )
                         info_y += line_height
                 else:
-                    cv2.putText(display_frame, "GPU: No GPU detected", (5, info_y), font, font_scale, color_white, thickness)
+                    cv2.putText(
+                        display_frame,
+                        "GPU: No GPU detected",
+                        (5, info_y),
+                        font,
+                        font_scale,
+                        color_white,
+                        thickness,
+                    )
                     info_y += line_height
-                
-                cv2.putText(display_frame, f"Provider: {provider_name}", (5, info_y), font, font_scale, color_white, thickness)
+
+                cv2.putText(
+                    display_frame,
+                    f"Provider: {provider_name}",
+                    (5, info_y),
+                    font,
+                    font_scale,
+                    color_white,
+                    thickness,
+                )
                 info_y += line_height
-                cv2.putText(display_frame, "Press 'i' to toggle", (5, info_y), font, 0.4, (200, 200, 200), 1)
+                cv2.putText(
+                    display_frame,
+                    "Press 'i' to toggle",
+                    (5, info_y),
+                    font,
+                    0.4,
+                    (200, 200, 200),
+                    1,
+                )
 
             cv2.imshow(window_name, display_frame)
             key = cv2.waitKey(1) & 0xFF
@@ -518,7 +593,10 @@ if __name__ == "__main__":
         image = cv2.imread(args.image)
         if image is None:
             print(f"Error: Could not load image from '{args.image}'", file=sys.stderr)
-            print("Please check that the file exists and is a valid image format.", file=sys.stderr)
+            print(
+                "Please check that the file exists and is a valid image format.",
+                file=sys.stderr,
+            )
             exit(1)
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -533,12 +611,17 @@ if __name__ == "__main__":
             bbox = face["bbox"]
             x, y, w, h = bbox["x"], bbox["y"], bbox["width"], bbox["height"]
             try:
-                face_crop = crop(image_rgb, (x, y, x + w, y + h), args.bbox_expansion_factor)
+                face_crop = crop(
+                    image_rgb, (x, y, x + w, y + h), args.bbox_expansion_factor
+                )
                 face_crops.append(face_crop)
                 valid_faces.append((int(x), int(y), int(w), int(h)))
             except Exception as e:
                 if args.verbose:
-                    print(f"Warning: Failed to crop face at ({x},{y},{w},{h}): {e}", file=sys.stderr)
+                    print(
+                        f"Warning: Failed to crop face at ({x},{y},{w},{h}): {e}",
+                        file=sys.stderr,
+                    )
                 continue
 
         if not face_crops:

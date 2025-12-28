@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -17,7 +16,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--orig_dir", required=True, help="Path to dataset root")
     p.add_argument("--crop_dir", required=True, help="Output folder for cropped images")
     p.add_argument("--size", type=int, default=224, help="Output image size (square)")
-    p.add_argument("--bbox_expansion_factor", type=float, default=1.5, help="Crop expansion factor")
+    p.add_argument(
+        "--bbox_expansion_factor", type=float, default=1.5, help="Crop expansion factor"
+    )
     p.add_argument(
         "--label_dir",
         default="metas/labels",
@@ -129,7 +130,9 @@ def main(argv: list[str] | None = None) -> int:
         full_img_path = os.path.join(orig_dir, str(index_path))
         rel_path = str(index_path)
         save_path = os.path.join(args.crop_dir, rel_path)
-        tasks.append((rel_path, full_img_path, save_path, args.size, args.bbox_expansion_factor))
+        tasks.append(
+            (rel_path, full_img_path, save_path, args.size, args.bbox_expansion_factor)
+        )
 
     with Pool(cpu_count()) as pool:
         list(tqdm(pool.imap_unordered(_process_single_image, tasks), total=len(tasks)))

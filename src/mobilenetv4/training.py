@@ -45,7 +45,9 @@ def train_one_epoch(
     save_callback: Optional[Callable[[int], None]] = None,
     save_interval: int = 100,  # Save every N batches
     start_batch_idx: int = 0,  # Resume from this batch (for mid-epoch resume)
-) -> Tuple[float, float, float, float]:  # Returns: (loss, accuracy, classification_loss, fourier_loss)
+) -> Tuple[
+    float, float, float, float
+]:  # Returns: (loss, accuracy, classification_loss, fourier_loss)
     model.train()
 
     running_loss = 0.0

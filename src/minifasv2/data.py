@@ -273,7 +273,11 @@ def get_train_valid(config):
 
     train_data = DataLoader(
         LivenessDatasetFT(
-            config.train_path, train_labels, train_transform, None, fourier_size=config.fourier_size
+            config.train_path,
+            train_labels,
+            train_transform,
+            None,
+            fourier_size=config.fourier_size,
         ),
         batch_size=config.batch_size,
         shuffle=True,

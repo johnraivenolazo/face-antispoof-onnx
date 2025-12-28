@@ -5,7 +5,6 @@ from tensorboardX import SummaryWriter
 import os
 import json
 import time
-import sys
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
@@ -84,9 +83,13 @@ class Trainer:
             train_fourier_loss = 0.0
             train_count = 0
 
-            for batch_idx, (sample, fourier_sample, labels) in enumerate(self.train_loader):
+            for batch_idx, (sample, fourier_sample, labels) in enumerate(
+                self.train_loader
+            ):
                 imgs = [sample, fourier_sample]
-                loss, accuracy, classification_loss, fourier_loss = self._train_batch_data(imgs, labels)
+                loss, accuracy, classification_loss, fourier_loss = (
+                    self._train_batch_data(imgs, labels)
+                )
 
                 train_loss += loss
                 train_accuracy += accuracy
@@ -104,7 +107,9 @@ class Trainer:
                         "Acc/train", train_accuracy / train_count, log_step
                     )
                     self.writer.add_scalar(
-                        "Loss_cls/train", train_classification_loss / train_count, log_step
+                        "Loss_cls/train",
+                        train_classification_loss / train_count,
+                        log_step,
                     )
                     self.writer.add_scalar(
                         "Loss_ft/train", train_fourier_loss / train_count, log_step
@@ -144,11 +149,15 @@ class Trainer:
             self.lr_scheduler.step()
 
             avg_train_loss = train_loss / train_count if train_count > 0 else 0.0
-            avg_train_accuracy = train_accuracy / train_count if train_count > 0 else 0.0
+            avg_train_accuracy = (
+                train_accuracy / train_count if train_count > 0 else 0.0
+            )
             avg_train_classification_loss = (
                 train_classification_loss / train_count if train_count > 0 else 0.0
             )
-            avg_train_fourier_loss = train_fourier_loss / train_count if train_count > 0 else 0.0
+            avg_train_fourier_loss = (
+                train_fourier_loss / train_count if train_count > 0 else 0.0
+            )
 
             self.model.eval()
             validation_accuracy = 0.0
@@ -159,7 +168,9 @@ class Trainer:
 
             for batch_idx, (sample, labels) in enumerate(self.valid_loader):
                 with torch.no_grad():
-                    accuracy, classification_loss, preds = self._valid_batch_data(sample, labels)
+                    accuracy, classification_loss, preds = self._valid_batch_data(
+                        sample, labels
+                    )
                 validation_accuracy += accuracy
                 validation_classification_loss += classification_loss
                 validation_count += 1
@@ -168,11 +179,18 @@ class Trainer:
                 all_validation_preds.extend(preds.cpu().numpy())
                 all_validation_labels.extend(labels.cpu().numpy())
 
-                if self.validation_step % self.log_valid_every == 0 and self.validation_step != 0:
+                if (
+                    self.validation_step % self.log_valid_every == 0
+                    and self.validation_step != 0
+                ):
                     log_step = self.validation_step // self.log_valid_every
-                    self.writer.add_scalar("Acc/valid", validation_accuracy / validation_count, log_step)
                     self.writer.add_scalar(
-                        "Loss_cls/valid", validation_classification_loss / validation_count, log_step
+                        "Acc/valid", validation_accuracy / validation_count, log_step
+                    )
+                    self.writer.add_scalar(
+                        "Loss_cls/valid",
+                        validation_classification_loss / validation_count,
+                        log_step,
                     )
 
                 validation_progress = ((batch_idx + 1) / len(self.valid_loader)) * 100
@@ -180,7 +198,9 @@ class Trainer:
                     batch_idx % max(5, len(self.valid_loader) // 20) == 0
                     or batch_idx == len(self.valid_loader) - 1
                 ):
-                    avg_validation_loss = validation_classification_loss / validation_count
+                    avg_validation_loss = (
+                        validation_classification_loss / validation_count
+                    )
                     avg_validation_accuracy = validation_accuracy / validation_count
                     print(
                         f"\rValid [{e+1}/{self.config.epochs}] | Progress: {validation_progress:5.1f}% | "
@@ -189,19 +209,30 @@ class Trainer:
                         flush=True,
                     )
 
-            avg_validation_accuracy = validation_accuracy / validation_count if validation_count > 0 else 0.0
-            avg_validation_loss = validation_classification_loss / validation_count if validation_count > 0 else 0.0
+            avg_validation_accuracy = (
+                validation_accuracy / validation_count if validation_count > 0 else 0.0
+            )
+            avg_validation_loss = (
+                validation_classification_loss / validation_count
+                if validation_count > 0
+                else 0.0
+            )
 
             all_validation_preds = np.array(all_validation_preds)
             all_validation_labels = np.array(all_validation_labels)
             num_classes = self.config.num_classes
             confusion_matrix_result = confusion_matrix(
-                all_validation_labels, all_validation_preds, labels=list(range(num_classes))
+                all_validation_labels,
+                all_validation_preds,
+                labels=list(range(num_classes)),
             )
             per_class_accuracy = []
             for i in range(num_classes):
                 if confusion_matrix_result[i, :].sum() > 0:
-                    per_class_accuracy.append(confusion_matrix_result[i, i] / confusion_matrix_result[i, :].sum())
+                    per_class_accuracy.append(
+                        confusion_matrix_result[i, i]
+                        / confusion_matrix_result[i, :].sum()
+                    )
                 else:
                     per_class_accuracy.append(0.0)
 
@@ -234,7 +265,9 @@ class Trainer:
                 f"TIME: {epoch_time:.1f}s | LR: {self.lr_scheduler.get_last_lr()[0]:.6f}"
             )
             if is_best:
-                print(f"★ NEW BEST MODEL! Val Acc improved to {avg_validation_accuracy*100:.2f}%")
+                print(
+                    f"★ NEW BEST MODEL! Val Acc improved to {avg_validation_accuracy*100:.2f}%"
+                )
             print(f'{"="*80}\n')
 
             self._save_checkpoint(
@@ -256,13 +289,20 @@ class Trainer:
         embeddings, feature_map = self.model.forward(imgs[0].to(self.config.device))
 
         classification_loss = self.classification_criterion(embeddings, labels)
-        fourier_loss = self.fourier_criterion(feature_map, imgs[1].to(self.config.device))
+        fourier_loss = self.fourier_criterion(
+            feature_map, imgs[1].to(self.config.device)
+        )
 
         loss = 0.5 * classification_loss + 0.5 * fourier_loss
         accuracy = self._get_accuracy(embeddings, labels)[0]
         loss.backward()
         self.optimizer.step()
-        return loss.item(), accuracy.item(), classification_loss.item(), fourier_loss.item()
+        return (
+            loss.item(),
+            accuracy.item(),
+            classification_loss.item(),
+            fourier_loss.item(),
+        )
 
     def _valid_batch_data(self, img, labels):
         labels = labels.to(self.config.device)
@@ -409,10 +449,12 @@ class Trainer:
             new_key = new_key.replace(".prob", ".logits")
             new_key = new_key.replace("model.drop", "model.dropout")
             new_key = new_key.replace(".drop", ".dropout")
-            new_key = new_key.replace("FTGenerator.ft.", "FTGenerator.fourier_transform.")
+            new_key = new_key.replace(
+                "FTGenerator.ft.", "FTGenerator.fourier_transform."
+            )
             new_key = new_key.replace("FTGenerator.ft", "FTGenerator.fourier_transform")
             new_model_state_dict[new_key] = value
-        
+
         self.model.load_state_dict(new_model_state_dict, strict=False)
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.lr_scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
@@ -424,8 +466,12 @@ class Trainer:
             self.start_epoch = saved_epoch - 1
 
         self.step = checkpoint.get("step", 0)
-        self.validation_step = checkpoint.get("validation_step", checkpoint.get("val_step", 0))
-        self.best_validation_accuracy = checkpoint.get("best_validation_accuracy", checkpoint.get("best_val_acc", 0.0))
+        self.validation_step = checkpoint.get(
+            "validation_step", checkpoint.get("val_step", 0)
+        )
+        self.best_validation_accuracy = checkpoint.get(
+            "best_validation_accuracy", checkpoint.get("best_val_acc", 0.0)
+        )
 
         batch_idx = checkpoint.get("batch_idx", None)
         if batch_idx is not None:
@@ -441,7 +487,13 @@ class Trainer:
             )
 
     def _save_mid_epoch_checkpoint(
-        self, epoch, batch_idx, avg_loss, avg_accuracy, avg_classification_loss, avg_fourier_loss
+        self,
+        epoch,
+        batch_idx,
+        avg_loss,
+        avg_accuracy,
+        avg_classification_loss,
+        avg_fourier_loss,
     ):
         checkpoint = {
             "epoch": epoch,

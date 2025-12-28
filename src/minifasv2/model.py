@@ -89,7 +89,13 @@ class Flatten(nn.Module):
 
 class Conv_block(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel=(1, 1), stride=(1, 1), padding=(0, 0), groups=1
+        self,
+        in_channels,
+        out_channels,
+        kernel=(1, 1),
+        stride=(1, 1),
+        padding=(0, 0),
+        groups=1,
     ):
         super(Conv_block, self).__init__()
         self.conv = nn.Conv2d(
@@ -113,7 +119,13 @@ class Conv_block(nn.Module):
 
 class Linear_block(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel=(1, 1), stride=(1, 1), padding=(0, 0), groups=1
+        self,
+        in_channels,
+        out_channels,
+        kernel=(1, 1),
+        stride=(1, 1),
+        padding=(0, 0),
+        groups=1,
     ):
         super(Linear_block, self).__init__()
         self.conv = nn.Conv2d(
@@ -345,7 +357,11 @@ class MiniFASNet(nn.Module):
         self.embedding_size = embedding_size
 
         self.conv1 = Conv_block(
-            num_channels, channel_config[0], kernel=(3, 3), stride=(2, 2), padding=(1, 1)
+            num_channels,
+            channel_config[0],
+            kernel=(3, 3),
+            stride=(2, 2),
+            padding=(1, 1),
         )
         self.conv2_dw = Conv_block(
             channel_config[0],
@@ -464,9 +480,18 @@ class MiniFASNet(nn.Module):
             groups=channel_config[40],
         )
 
-        c1 = [(channel_config[40], channel_config[41]), (channel_config[43], channel_config[44])]
-        c2 = [(channel_config[41], channel_config[42]), (channel_config[44], channel_config[45])]
-        c3 = [(channel_config[42], channel_config[43]), (channel_config[45], channel_config[46])]
+        c1 = [
+            (channel_config[40], channel_config[41]),
+            (channel_config[43], channel_config[44]),
+        ]
+        c2 = [
+            (channel_config[41], channel_config[42]),
+            (channel_config[44], channel_config[45]),
+        ]
+        c3 = [
+            (channel_config[42], channel_config[43]),
+            (channel_config[45], channel_config[46]),
+        ]
 
         self.conv_5 = Residual(
             c1,
@@ -479,7 +504,11 @@ class MiniFASNet(nn.Module):
             padding=(1, 1),
         )
         self.conv_6_sep = Conv_block(
-            channel_config[46], channel_config[47], kernel=(1, 1), stride=(1, 1), padding=(0, 0)
+            channel_config[46],
+            channel_config[47],
+            kernel=(1, 1),
+            stride=(1, 1),
+            padding=(0, 0),
         )
         self.conv_6_dw = Linear_block(
             channel_config[47],
@@ -600,9 +629,18 @@ class MiniFASNetSE(MiniFASNet):
             padding=(1, 1),
         )
 
-        c1 = [(channel_config[40], channel_config[41]), (channel_config[43], channel_config[44])]
-        c2 = [(channel_config[41], channel_config[42]), (channel_config[44], channel_config[45])]
-        c3 = [(channel_config[42], channel_config[43]), (channel_config[45], channel_config[46])]
+        c1 = [
+            (channel_config[40], channel_config[41]),
+            (channel_config[43], channel_config[44]),
+        ]
+        c2 = [
+            (channel_config[41], channel_config[42]),
+            (channel_config[44], channel_config[45]),
+        ]
+        c3 = [
+            (channel_config[42], channel_config[43]),
+            (channel_config[45], channel_config[46]),
+        ]
         self.conv_5 = ResidualSE(
             c1,
             c2,
@@ -671,7 +709,11 @@ channel_config_dict = {
 
 
 def MiniFASNetV2SE(
-    embedding_size=128, conv6_kernel=(7, 7), dropout_prob=0.75, num_classes=2, num_channels=3
+    embedding_size=128,
+    conv6_kernel=(7, 7),
+    dropout_prob=0.75,
+    num_classes=2,
+    num_channels=3,
 ):
     return MiniFASNetSE(
         channel_config_dict["1.8M_"],
